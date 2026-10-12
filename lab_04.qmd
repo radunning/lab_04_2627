@@ -16,12 +16,21 @@ This lab accompanies the Week 4 notes, [*Data Wrangling I - Loading, Cleaning an
 
 ### Task 1: Loading Data
 
-- [ ] The directory `data/part1/` contains three data files. Load them into `R` using `tidyverse`. (Hint: the three files are not all formatted in the same way.)
+- [x] The directory `data/part1/` contains three data files. Load them into `R` using `tidyverse`. (Hint: the three files are not all formatted in the same way.)
 - [ ] By default, each `read_*` function prints a message describing the columns it has read. Make sure these messages are hidden.
 - [ ] For each of the files, display the first few rows of the file.
 
-::: {.solution}
 
+::: {.solution}
+```{r}
+#| message: false
+library(tidyverse)
+data_1 <- read_csv("data/part1/data1.csv")
+data_2 <- read_delim("data/part1/data2.txt", delim="\t")
+data_3 <- read_delim("data/part1/data3", delim=";")
+
+head(data_1)
+```
 :::
 
 ### Task 1b: Checking Loaded Data
@@ -33,20 +42,37 @@ In this task we will look more closely at the three files from Task 1.
 The file `data3` contains information about books in a bookshop.
 
 - [ ] Look at the type of each column. Is the `ISBN` column stored sensibly? (Hint: an ISBN is an identifier; would it make sense to add two ISBNs together? What would happen to an ISBN that starts with a `0`?)
-- [ ] Reload the file so that `ISBN` is stored as text. (Hint: look up the `col_types` argument of `read_delim`, and the `cols` and `col_character` functions.)
-- [ ] `readr` also has a function called `read_csv2`, which reads files that use `;` as a delimiter. Try loading `data3` with `read_csv2` instead. Compare the `PriceUSD` and `AvgRating` columns to the raw file. What has gone wrong?
+- [x] Reload the file so that `ISBN` is stored as text. (Hint: look up the `col_types` argument of `read_delim`, and the `cols` and `col_character` functions.)
+- [x] `readr` also has a function called `read_csv2`, which reads files that use `;` as a delimiter. Try loading `data3` with `read_csv2` instead. Compare the `PriceUSD` and `AvgRating` columns to the raw file. What has gone wrong?
 
 ::: {.solution}
+It makes sense to store it as a character
+```{r}
+data_3 <- read_delim("data/part1/data3", delim=";",col_types = cols(ISBN=col_character())) 
+data_3
+
+data_3 |>head()
+data_3_eu <- read_csv2("data/part1/data3",col_types = cols(ISBN=col_character())) 
+data_3_eu |> head()
+#the comma is assumed to be the decimal point ex. says the copper orchard is $1499
+```
 
 :::
 
 The file `data1.csv` contains student scores from two tests, with their average.
 
-- [ ] How are missing scores recorded in the raw file, and what do they become when loaded into `R`? What else in the file was loaded as missing?
+- [x] How are missing scores recorded in the raw file, and what do they become when loaded into `R`? What else in the file was loaded as missing?
 - [ ] Compute the mean of `score1`. Why do you get `NA`, and how can you fix this? (Hint: look at how `na.rm` was used in the notes.)
 - [ ] Look at the row for Henry Zhao. Are his scores really `0`? What happens to the mean of `score1` and of `average` if he is excluded?
 
 ::: {.solution}
+In the raw file the missing scores are recorded as empty. When loaded into R they become NA. The notes of Ivy Chen are also missing and are empty in the spreadsheet and when loaded into R.
+```{r}
+data_1
+mean(data_1$score1)
+#The result is NA because Frank O'Neill's score 1 is missing
+
+```
 
 :::
 
@@ -100,22 +126,33 @@ For the next few tasks you should use `dplyr` functions, using pipe syntax.
 Try to format your code nicely so it is readable.
 
 
-- [ ] Add a new column to the `tibble` called `volume` that contains the volume of the diamond ($x \times y \times z$).
+- [x] Add a new column to the `tibble` called `volume` that contains the volume of the diamond ($x \times y \times z$).
 
 
 ::: {.solution}
+```{r}
+diamonds |>
+  mutate(volume = x*y*z)
+```
 
 :::
 
 - [ ] Create a `tibble` containing only the numeric columns of `diamonds`. (Hint: look at the tidyselect callout in the notes.)
 
 ::: {.solution}
+```{r}
+diamonds_numeric = diamonds |>
+  select(where(is.numeric))
+diamonds <- diamonds |>
+  mutate(volume = x*y*z)
+diamonds$volume
+```
 
 :::
 
 Now answer the following research questions.
 
-- [ ] What is the average price of all the diamonds in the dataset?
+- [x] What is the average price of all the diamonds in the dataset?
 - [ ] What is the volume of the 5 highest priced diamonds?
 - [ ] What is the average, minimum and maximum price of diamonds for each cut?
 - [ ] Ideal is the best cut, yet it has the lowest average price. Can you explain why? (Hint: compare the average `carat` of each cut.)
@@ -124,7 +161,11 @@ Now answer the following research questions.
 - [ ] Create a `tibble` containing diamonds that are "unusually" large (having volume more than three standard deviations from the mean volume)?
 
 ::: {.solution}
-
+```{r}
+mean(diamonds_numeric$price)
+#$3982.8
+diamonds$volume
+```
 :::
 
 Before trusting these results, it is worth checking whether they make sense. Since all diamonds have the same density, heavier diamonds are larger, so `carat` and `volume` should be closely related.
@@ -154,6 +195,14 @@ However, not all students take all assessments, and assessments the student has 
 - [ ] Load the file and look at it. Recall the three rules of tidy data from the notes. Is this table tidy? If not, which rule(s) does it break?
 
 ::: {.solution}
+```{r}
+assessment <- read_csv("data/part3/assessment.csv")
+assessment
+#1 Each variable is a column.
+#2 Each observation is a row.
+#3 Each cell contains a single value.
+#The observations are columns. Some cells have missing data
+```
 
 :::
 
@@ -161,7 +210,16 @@ However, not all students take all assessments, and assessments the student has 
 - [ ] Compute each student's overall average, and the number of assessments they took. (Hint: look at the "Other Summarise Functions" tip in the notes.)
 
 ::: {.solution}
-
+```{r}
+assessment_longer = assessment |>
+  pivot_longer(
+    cols = -student_id,
+    names_sep = "_",
+    names_to = c("Semester", "Assessment"),
+    values_to = "Grade"
+  )
+assessment_longer
+```
 :::
 
 - [ ] Redo the pivot, this time using `starts_with` to choose the columns to pivot. Check you get the same result. Suppose a new column `student_name` were added to the file: which of the two approaches would still work, and why?
